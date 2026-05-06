@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
         grid.setColumnCount(2);
         vertical.addView(grid);
 
-        if (!tracks.isEmpty()) addAlbumCard(grid, "Favorite Tracks", tracks.size() + " Tracks", tracks.get(0), -1);
+        if (!tracks.isEmpty()) addAlbumCard(grid, "Favorite Tracks", trackCountLabel(tracks.size()), tracks.get(0), -1);
         for (Album album : albums()) addAlbumCard(grid, album.name, album.artist, album.firstTrack, album.firstIndex);
         scroll.addView(vertical);
         frame.addView(scroll);
@@ -255,7 +255,7 @@ public class MainActivity extends Activity {
         LinearLayout list = new LinearLayout(this);
         list.setOrientation(LinearLayout.VERTICAL);
         list.setPadding(dp(16), 0, dp(16), dp(106));
-        TextView header = titleText("Local tracks", 24);
+        TextView header = titleText("Local Tracks", 24);
         list.addView(header);
         for (int i = 0; i < tracks.size(); i++) list.addView(songRow(i, true));
         scroll.addView(list);
@@ -531,6 +531,10 @@ public class MainActivity extends Activity {
     private String format(long millis) {
         long total = Math.max(0, millis / 1000);
         return String.format(Locale.getDefault(), "%d:%02d", total / 60, total % 60);
+    }
+
+    private String trackCountLabel(int count) {
+        return count + (count == 1 ? " Track" : " Tracks");
     }
 
     private int dp(int value) {
