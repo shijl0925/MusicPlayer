@@ -13,7 +13,7 @@ def generatedDir = layout.buildDirectory.dir('generated/aapt')
 def classesDir = layout.buildDirectory.dir('intermediates/classes')
 def dexDir = layout.buildDirectory.dir('intermediates/dex')
 def apkDir = layout.buildDirectory.dir('outputs/apk/debug')
-def debugKeystore = layout.buildDirectory.file('debug.keystore')
+def debugKeystore = file('debug.keystore')
 
 tasks.register('compileResources', Exec) {
     def compiled = layout.buildDirectory.file('intermediates/resources.zip')
@@ -102,9 +102,9 @@ tasks.register('zipalignDebug', Exec) {
 
 tasks.register('createDebugKeystore', Exec) {
     outputs.file(debugKeystore)
-    onlyIf { !debugKeystore.get().asFile.exists() }
+    onlyIf { !debugKeystore.exists() }
     commandLine 'keytool', '-genkeypair',
-            '-keystore', debugKeystore.get().asFile,
+            '-keystore', debugKeystore,
             '-storepass', 'android',
             '-keypass', 'android',
             '-alias', 'androiddebugkey',
@@ -125,7 +125,7 @@ tasks.register('assembleDebug', Exec) {
         output.get().asFile.delete()
     }
     commandLine "${buildTools}/apksigner", 'sign',
-            '--ks', debugKeystore.get().asFile,
+            '--ks', debugKeystore,
             '--ks-pass', 'pass:android',
             '--key-pass', 'pass:android',
             '--out', output.get().asFile,
