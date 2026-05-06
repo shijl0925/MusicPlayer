@@ -22,11 +22,41 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Build debug APK
         run: ./gradlew assembleDebug
+
+      - name: Prepare pull request APK
+        if: github.event_name == 'pull_request'
+        run: |
+          mkdir -p apk-artifact
+          cp app/build/outputs/apk/debug/app-debug.apk apk-artifact/music-player-pr-${{ github.event.pull_request.number }}-debug.apk
+
+      - name: Upload pull request APK artifact
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: music-player-pr-${{ github.event.pull_request.number }}-debug-apk
+          path: apk-artifact/*.apk
+          retention-days: 14
+
+      - name: Add pull request APK download instructions
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "## Android APK"
+            echo ""
+            echo "Debug APK built for PR #${{ github.event.pull_request.number }}."
+            echo ""
+            echo "Download from this workflow run: **Artifacts → music-player-pr-${{ github.event.pull_request.number }}-debug-apk**."
+            echo ""
+            echo "After downloading in your browser, unzip the artifact and install the APK on your Android phone."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload APK artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
           name: music-player-debug-apk
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14
       - name: Attach APK to GitHub release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
