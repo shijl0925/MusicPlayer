@@ -5,8 +5,13 @@ import android.app.Activity;
 import android.content.ContentUris;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.MediaPlayer;
 import android.net.Uri;
@@ -437,7 +442,7 @@ public class MainActivity extends Activity {
         if (miniTitle != null) miniTitle.setText(track.title);
         if (miniArtist != null) miniArtist.setText(track.artist);
         if (miniArt != null) setArtwork(miniArt, track);
-        if (miniPlay != null) miniPlay.setImageDrawable(null);
+        if (miniPlay != null) miniPlay.setImageDrawable(new TextDrawable(isPlaying() ? "❚❚" : "▶"));
     }
 
     private void updateProgress() {
@@ -484,7 +489,6 @@ public class MainActivity extends Activity {
     private ImageButton controlButton(String text) {
         ImageButton button = new ImageButton(this);
         button.setBackground(round(Color.WHITE, dp(28)));
-        TextView label = new TextView(this);
         button.setContentDescription(text);
         button.setImageDrawable(new TextDrawable(text));
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(dp(56), dp(56));
@@ -595,6 +599,38 @@ public class MainActivity extends Activity {
             this.artist = artist;
             this.firstTrack = firstTrack;
             this.firstIndex = firstIndex;
+        }
+    }
+
+    private static final class TextDrawable extends Drawable {
+        private final String text;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        TextDrawable(String text) {
+            this.text = text;
+            paint.setColor(Color.rgb(28, 28, 32));
+            paint.setTextAlign(Paint.Align.CENTER);
+            paint.setTypeface(Typeface.DEFAULT_BOLD);
+        }
+
+        @Override public void draw(Canvas canvas) {
+            paint.setTextSize(getBounds().height() * 0.42f);
+            Paint.FontMetrics metrics = paint.getFontMetrics();
+            float x = getBounds().centerX();
+            float y = getBounds().centerY() - (metrics.ascent + metrics.descent) / 2f;
+            canvas.drawText(text, x, y, paint);
+        }
+
+        @Override public void setAlpha(int alpha) {
+            paint.setAlpha(alpha);
+        }
+
+        @Override public void setColorFilter(ColorFilter colorFilter) {
+            paint.setColorFilter(colorFilter);
+        }
+
+        @Override public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
         }
     }
 }
