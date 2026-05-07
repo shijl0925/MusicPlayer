@@ -42,8 +42,8 @@ tasks.register('linkResources', Exec) {
             '--java', generatedDir.get().asFile,
             '--min-sdk-version', '23',
             '--target-sdk-version', '35',
-            '--version-code', '1',
-            '--version-name', '1.0.0',
+            '--version-code', '2',
+            '--version-name', '1.0.1',
             '-o', linked.get().asFile,
             layout.buildDirectory.file('intermediates/resources.zip').get().asFile
 }

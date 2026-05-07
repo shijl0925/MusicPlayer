@@ -22,4 +22,4 @@ The APK is generated at `app/build/outputs/apk/debug/app-debug.apk`.
 
 For every pull request, the **Android APK** workflow builds a debug APK and uploads it as a workflow artifact named `music-player-pr-<PR number>-debug-apk`. Open the workflow run in a browser, download the artifact from **Artifacts**, unzip it, and install the APK on your Android phone for verification.
 
-If Android reports that the app was not installed when updating from an older CI APK, uninstall the existing **Music Player** app once and then install the new APK. Future PR APKs use the same debug signing key, so they can update each other normally.
+The APK package name is `io.github.shijl0925.musicplayer`. If Android reports that the app was not installed when updating from an older CI APK, uninstall the existing **Music Player** app once and then install the new APK. Future PR APKs use the same package name, version sequence, and debug signing key, so they can update each other normally.

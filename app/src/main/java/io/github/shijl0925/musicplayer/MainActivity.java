@@ -1,4 +1,4 @@
-package com.example.musicplayer;
+package io.github.shijl0925.musicplayer;
 
 import android.Manifest;
 import android.app.Activity;
