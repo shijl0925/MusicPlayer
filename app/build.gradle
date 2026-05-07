@@ -1,0 +1,133 @@
+plugins {
+    id 'base'
+}
+
+def sdkDir = System.getenv('ANDROID_HOME') ?: System.getenv('ANDROID_SDK_ROOT')
+if (sdkDir == null) {
+    throw new GradleException('ANDROID_HOME or ANDROID_SDK_ROOT must point to an installed Android SDK.')
+}
+
+def buildTools = file("${sdkDir}/build-tools/35.0.0")
+def androidJar = file("${sdkDir}/platforms/android-35/android.jar")
+def generatedDir = layout.buildDirectory.dir('generated/aapt')
+def classesDir = layout.buildDirectory.dir('intermediates/classes')
+def dexDir = layout.buildDirectory.dir('intermediates/dex')
+def apkDir = layout.buildDirectory.dir('outputs/apk/debug')
+def debugKeystore = file('debug.keystore')
+
+tasks.register('compileResources', Exec) {
+    def compiled = layout.buildDirectory.file('intermediates/resources.zip')
+    inputs.dir('src/main/res')
+    outputs.file(compiled)
+    doFirst {
+        compiled.get().asFile.parentFile.mkdirs()
+    }
+    commandLine "${buildTools}/aapt2", 'compile', '--dir', 'src/main/res', '-o', compiled.get().asFile
+}
+
+tasks.register('linkResources', Exec) {
+    dependsOn 'compileResources'
+    def linked = layout.buildDirectory.file('intermediates/linked.apk')
+    inputs.file('src/main/AndroidManifest.xml')
+    inputs.file(layout.buildDirectory.file('intermediates/resources.zip'))
+    outputs.file(linked)
+    outputs.dir(generatedDir)
+    doFirst {
+        generatedDir.get().asFile.mkdirs()
+        linked.get().asFile.parentFile.mkdirs()
+    }
+    commandLine "${buildTools}/aapt2", 'link',
+            '-I', androidJar,
+            '--manifest', 'src/main/AndroidManifest.xml',
+            '--java', generatedDir.get().asFile,
+            '--min-sdk-version', '23',
+            '--target-sdk-version', '35',
+            '--version-code', '2',
+            '--version-name', '1.0.1',
+            '-o', linked.get().asFile,
+            layout.buildDirectory.file('intermediates/resources.zip').get().asFile
+}
+
+tasks.register('compileDebugJava', JavaCompile) {
+    dependsOn 'linkResources'
+    source = files('src/main/java', generatedDir)
+    classpath = files(androidJar)
+    destinationDirectory = classesDir
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+    options.release = 8
+}
+
+tasks.register('dexDebug', Exec) {
+    dependsOn 'compileDebugJava'
+    inputs.dir(classesDir)
+    outputs.dir(dexDir)
+    doFirst {
+        dexDir.get().asFile.mkdirs()
+        def classFiles = fileTree(classesDir).matching { include '**/*.class' }.files
+        commandLine(["${buildTools}/d8", '--min-api', '23', '--lib', androidJar, '--output', dexDir.get().asFile] + classFiles)
+    }
+}
+
+tasks.register('packageDebug') {
+    dependsOn 'linkResources', 'dexDebug'
+    def unaligned = layout.buildDirectory.file('intermediates/app-debug-unaligned.apk')
+    inputs.file(layout.buildDirectory.file('intermediates/linked.apk'))
+    inputs.file(layout.buildDirectory.file('intermediates/dex/classes.dex'))
+    outputs.file(unaligned)
+    doLast {
+        copy {
+            from layout.buildDirectory.file('intermediates/linked.apk')
+            into unaligned.get().asFile.parentFile
+            rename { 'app-debug-unaligned.apk' }
+        }
+        ant.zip(destfile: unaligned.get().asFile, update: true) {
+            zipfileset(file: layout.buildDirectory.file('intermediates/dex/classes.dex').get().asFile, fullpath: 'classes.dex')
+        }
+    }
+}
+
+tasks.register('zipalignDebug', Exec) {
+    dependsOn 'packageDebug'
+    def aligned = layout.buildDirectory.file('intermediates/app-debug-aligned.apk')
+    inputs.file(layout.buildDirectory.file('intermediates/app-debug-unaligned.apk'))
+    outputs.file(aligned)
+    doFirst {
+        aligned.get().asFile.delete()
+    }
+    commandLine "${buildTools}/zipalign", '-p', '4',
+            layout.buildDirectory.file('intermediates/app-debug-unaligned.apk').get().asFile,
+            aligned.get().asFile
+}
+
+tasks.register('createDebugKeystore', Exec) {
+    outputs.file(debugKeystore)
+    onlyIf { !debugKeystore.exists() }
+    commandLine 'keytool', '-genkeypair',
+            '-keystore', debugKeystore,
+            '-storepass', 'android',
+            '-keypass', 'android',
+            '-alias', 'androiddebugkey',
+            '-keyalg', 'RSA',
+            '-keysize', '2048',
+            '-validity', '10000',
+            '-dname', 'CN=Android Debug,O=Android,C=US'
+}
+
+tasks.register('assembleDebug', Exec) {
+    dependsOn 'zipalignDebug', 'createDebugKeystore'
+    def output = apkDir.map { it.file('app-debug.apk') }
+    inputs.file(layout.buildDirectory.file('intermediates/app-debug-aligned.apk'))
+    inputs.file(debugKeystore)
+    outputs.file(output)
+    doFirst {
+        apkDir.get().asFile.mkdirs()
+        output.get().asFile.delete()
+    }
+    commandLine "${buildTools}/apksigner", 'sign',
+            '--ks', debugKeystore,
+            '--ks-pass', 'pass:android',
+            '--key-pass', 'pass:android',
+            '--out', output.get().asFile,
+            layout.buildDirectory.file('intermediates/app-debug-aligned.apk').get().asFile
+}

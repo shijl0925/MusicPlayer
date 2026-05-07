@@ -1,0 +1,3 @@
+// Root build file intentionally stays dependency-free. The app module uses
+// Android SDK command-line tools so CI can build the APK without Android Gradle
+// Plugin resolution.
